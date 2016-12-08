@@ -2,6 +2,8 @@
 
 import numpy as np
 import itertools as it
+import pandas as pd
+from pandas import Series, DataFrame
 
 import group_class
 import utils
@@ -349,6 +351,26 @@ def display(data, mom, empty=None):
             if count == empty:
                 count = 0
                 print("")
+
+def cg_to_pandas(data, mom):
+    """Converts the Clebsch-Gordan coefficients for a two-particle operator
+    into a pandas DataFrame according to the conventions used in subduction.py.
+    """
+
+    nb_mom = len(mom)
+    nb_rows = len(data[0])
+
+    # convert momenta into tuples (p_so, p_si) and copy for every row
+    # fill \gamma_5 as gamma structure i. e. two pions hardcoded
+    # flatten data to one list with row running faster than momentum
+    df = DataFrame({'p' : [tuple([tuple(m[1]), tuple(m[2])]) \
+                                       for m in mom for _i in range(nb_rows)], \
+                    '\gamma' : [(5,5)] * nb_mom*nb_rows, \
+                    'cg-coefficients' : 
+                                     [cg for cg_row in data for cg in cg_row]}, \
+                   index = pd.Index( range(nb_rows) * nb_mom, name='\mu'))
+    print df
+
 
 if __name__ == "__main__":
     print("for checks execute the test script")

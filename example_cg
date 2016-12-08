@@ -24,24 +24,22 @@ def main():
             a, b, c = cgs.get_pion_cg(ir)
             if b is not None:
                 print(ir)
-                group.display(b, c)
+                group.cg_to_pandas(b,c)
+                print ' '
 
     print(" MF1 ".center(40, "*"))
     irnames = groups[1].lirreps
     for i, j in it.product(range(p2max), repeat=2):
         if j-i != 1:
             continue
-        if i == 0 or j == 0:
-            empty = 3
-        else:
-            empty = 4
         cgs = group.OhCG(1, i, j, groups)
         print("%d x %d -> 1" % (i, j))
         for ir in irnames:
             a, b, c = cgs.get_pion_cg(ir)
             if b is not None:
                 print(ir)
-                group.display(b, c, empty=empty)
+                group.cg_to_pandas(b,c)
+                print ' '
 
 if __name__ == "__main__":
     try:
