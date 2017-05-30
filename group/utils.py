@@ -5,6 +5,7 @@ import unittest
 import numpy as np
 import scipy.misc
 
+# Rounds real and imaginary part of a complex number to zero if smaller than prec
 def clean_complex(data, prec=1e-6):
     _data = np.asarray(data)
     for x in np.nditer(_data, op_flags=["readwrite"]):
@@ -21,6 +22,7 @@ def clean_complex(data, prec=1e-6):
         x[...] += tmp
     return _data
 
+# Rounds real number to zero if smaller than prec
 def clean_real(data, prec=1e-6):
     _data = np.asarray(data)
     for x in np.nditer(_data, op_flags=["readwrite"]):
@@ -28,6 +30,7 @@ def clean_real(data, prec=1e-6):
             x[...] *= 0.
     return _data
 
+# Compare two np.ndarrays 
 def _eq(data1, data2=None, prec=1e-6):
     if data2 is None:
         return np.all(np.abs(data1) < prec)

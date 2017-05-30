@@ -11,7 +11,7 @@ import group_generators_quat as gg
 from rotations import mapping
 
 class TOh(object):
-    """Internal everything is done in the symmetrized spherical harmonics base
+    """Internally everything is done in the symmetrized spherical harmonics base
     for T1u: (|11>_+, |10>, |11>_-).
     All momenta given are changed to this basis and then transformed with the
     matrix U3, if given.
@@ -201,20 +201,26 @@ class TOh(object):
         self.elements = []
         self.lelements = []
         # all possible elements for the double cover octahedral group
+
+        # all elements of O
         for i, el in enumerate(quat.qPar):
             self.elements.append(quat.QNew.create_from_vector(el, 1))
             self.lelements.append(i);
+        # all elements of O with inversion
         if self.withinversion:
             for i, el in enumerate(quat.qPar):
                 self.elements.append(quat.QNew.create_from_vector(el, -1))
                 self.lelements.append(i+24);
+        # all elements in the double cover of O
         for i, el in enumerate(quat.qPar):
             self.elements.append(quat.QNew.create_from_vector(-el, 1))
             self.lelements.append(i+48);
+        # all elements in the double cover of O with inversion
         if self.withinversion:
             for i, el in enumerate(quat.qPar):
                 self.elements.append(quat.QNew.create_from_vector(-el, -1))
                 self.lelements.append(i+72);
+
         if self.pref is None:
             self.p2 = 0
         else:
@@ -226,14 +232,15 @@ class TOh(object):
             # change reference momentum to T1u basis
             bpref = self.U3.dot(self.pref)
             T1irrep = gg.genT1CMF(self.elements, inv=True, U=self.U3)
-            #for el, num in zip(self.elements, self.lelements):
+
+            # Go through all elements of T1 and check whether they leave pref 
+            # unchanged
             for mat, el, num in zip(T1irrep, self.elements, self.lelements):
                 tmp = mat.dot(bpref)
-                #tmp = mat.dot(self.pref)
-                #tmp = el.rotation_matrix(self.withinversion).dot(self.pref)
                 c1 = utils._eq(tmp - bpref)
-                #c1 = utils._eq(tmp - self.pref)
-                if c1:
+                # if mat * bpref == bpref, the quaternion belongs to subgroup 
+                # invariant under pref and is appended
+                if c1: 
                     selected.append(num)
                     elem.append(el)
             if self.debug > 0:
@@ -242,9 +249,12 @@ class TOh(object):
                 tmpstr = ["%d" % x for x in selected]
                 tmpstr = ", ".join(tmpstr)
                 print("[%s]" % tmpstr)
+            # replace self.elements with only the relevant subgroup
             self.elements = elem
             self.lelements = selected
 
+    # calculate all possible multiplications and save the index of the 
+    # resulting element
     def make_mult_table(self):
         self.tmult = np.zeros((self.order, self.order), dtype=int)
         self.tmult_global = np.zeros_like(self.tmult)
@@ -262,6 +272,7 @@ class TOh(object):
                 self.tmult_global[i,j] = self.lelements[res]
         self.is_faithful()
 
+    # Check if representation is faithful
     def is_faithful(self):
         # check if complete
         self.faithful = True
@@ -276,6 +287,8 @@ class TOh(object):
         if not utils._eq(tmp, checksum):
             self.faithful = False
 
+    # calculate all products of elements until the result is one save the 
+    # index of the right factor as the inverse of the left.
     def make_inv_list(self):
         self.linv = np.zeros((self.order,), dtype=int)
         self.linv_global = np.zeros((self.order,), dtype=int)
@@ -287,6 +300,8 @@ class TOh(object):
                     self.linv_global[i] = self.lelements[k]
                     break
 
+    # calculate group conjugates of every element. For every i, j check 
+    # whether k^{-1}*j*k = i
     def make_conjugacy_relations(self):
         self.tconjugacy = np.zeros_like(self.tmult, dtype=int)
         # 2 nested for loops
@@ -299,6 +314,7 @@ class TOh(object):
                     self.tconjugacy[i,j] = 1
                     break
 
+    # Assign conjugacy classes
     def assign_classes(self):
         # assign a class representative for each class
         tmp = np.ones((self.order,), dtype=int) * -1
@@ -307,9 +323,11 @@ class TOh(object):
                 if tmp[j] == -1:
                     tmp[j] = i
         tmps = np.sort(tmp)
+        # Number of classes
         self.nclasses = len(np.unique(tmp))
-        # get dimension and representative of each class
+        # dimension of each class
         self.cdim = np.zeros((self.nclasses,), dtype=int)
+        # representative of each class
         self.crep = np.zeros((self.nclasses,), dtype=int)
         icls, j = -1, -1
         for i in range(self.order):
@@ -322,6 +340,7 @@ class TOh(object):
                 self.cdim[icls] += 1
         cdimmax = np.max(self.cdim)
         # sort all elements into the classes
+        # array with index of all elements for all classes and -1 as placeholder
         self.lclasses = np.ones((self.nclasses, cdimmax), dtype=int) * -1
         for i in range(self.nclasses):
             k = -1
@@ -537,16 +556,25 @@ class TOh(object):
             if alldone:
                 break
 
+    # schlimmste Funktion die Christian jemals geschrieben hat und hoffentlich je schreiben wird.
     def find_irreps(self):
         self.irreps = []
         self.irrepsname = []
         self.irrepdim = np.zeros((self.nclasses,), dtype=int)
+        # character table
         self.tchar = np.zeros((self.nclasses, self.nclasses), dtype=complex)
         # find the possible combinations of irrep dimensions
+        # sum_{C} d_C^2 = |G|
         self.find_possible_dims()
         # get flip vectors
         self.find_flip_vectors()
         alldone = self.check_possible_dims()
+        # find out brute force which combination of irrep dimensions is realized
+        # Loop over irrep dimension from d = 1 to 4 
+        # 1. Try generating irreps from SU(2) algebra in d dimensions
+        # 2. Try special irrep (not from an algebra) in d dimensions
+        # 3. Try to find imaginary flip vectors. For |G| > 10 very expensive -> last resort
+        # 4. Break if all irreps are found
         if not alldone:
             for d in range(1, 5):
                 # find irreps with simple generators
@@ -564,6 +592,7 @@ class TOh(object):
                     self.find_flip_vectors_imaginary()
                     self.get_irreps_imaginary()
                 else:
+                    # try groups that can not be generated from an algebra (E, H)
                     self.get_irreps(d, special=True)
                 alldone = self.check_possible_dims()
                 if alldone:
@@ -663,6 +692,7 @@ class TOh(object):
         irrep.irid = ind
         self.tchar[ind] = irrep.characters(self.crep)
 
+    # sort 1d irreps such that irreps connected by inversion come next to each other
     def sort_flip_vectors(self, flips, special=False):
         """special flag is when flips do not contain the inversion.
         """
@@ -741,6 +771,10 @@ class TOh(object):
                 tmpf.append(_flips[_suffixes.index(s)])
         return np.asarray(tmpf), tmp
 
+    # Calculate all 1d irreps
+    # idea: take A1 and flip all elements of any class and check whether a irrep was found 8-Q
+    # Only finds purely real irreps.
+    # See find_flip_vectors_imaginary()
     def find_flip_vectors(self):
         irrep = TOh1D(self.elements)
         flips = []
@@ -848,7 +882,10 @@ class TOh(object):
         flips = np.asarray(flips, dtype=complex)
         self.flip_i, self.suffixes_i = self.sort_flip_vectors(flips, special=True)
 
+    # Build matrix representations for each irrep
     def get_irreps(self, dim, naming=None, special=False):
+
+        # Set consistent naming scheme (not following any particular convention)
         if special:
             if dim == 2:
                 rep = lambda x=None: TOh2Dp(self.elements, self.pref_cart, U=self.U2)
@@ -874,6 +911,8 @@ class TOh(object):
 
         if self.debug > 2:
             print("finding %dD irreps" % dim)
+        # build first irrep from algebra (A1g, E1/2g, T1g, F1g)
+        # rep is a lambda defined above
         ir = rep()
         ir.name = "".join([_name, "1g"])
         check1 = ir.is_representation(self.tmult, verbose=False)
@@ -883,6 +922,7 @@ class TOh(object):
         if self.debug > 2:
             print("Irrep %s is representation (%r) and orthogonal (%r)" % (
                     ir.name, check1, check2))
+        # Loop over all flip vectors, flip first irrep and check whether also an irrep
         for f, s in zip(self.flip, self.suffixes):
             ir = rep()
             ir.flip_classes(f, self.lclasses)
@@ -903,6 +943,7 @@ class TOh(object):
             if ir.is_representation(self.tmult) and self.check_ortho(ir):
                 self.append_irrep(ir)
 
+# irrep class
 class TOhRep(object):
     def __init__(self, dimension):
         self.dim = dimension
@@ -959,6 +1000,8 @@ class TOhRep(object):
                 if el == -1:
                     break
                 self.mx[el] *= v
+
+# See get_irreps()
 
 class TOh1D(TOhRep):
     def __init__(self, elements, U=None):

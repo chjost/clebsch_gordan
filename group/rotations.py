@@ -1,3 +1,5 @@
+"""Deprecated"""
+
 """Representation of discrete rotations for the double cover octahedral group
 with parity.
 """

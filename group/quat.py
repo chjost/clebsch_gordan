@@ -37,7 +37,9 @@ qPar = np.asarray(
 
 class QNew(object):
     def __init__(self):
+        # entries
         self.q = np.zeros((4,))
+        # Inversion flag for double cover
         self.i = int(1)
         self.prec = 1e-6
 
@@ -98,6 +100,7 @@ class QNew(object):
 
     # code inspired by the quaternion package of moble
     # https://github.com/moble/quaternion
+    # creates SU(3) rotation matrix from quaternion
     def rotation_matrix(self, inv=False):
         n = self.norm()
         if np.abs(n) < self.prec:
@@ -123,6 +126,8 @@ class QNew(object):
             res *= self.i
         return res
 
+    # Calculate rotation vector from quaternion
+    # Warning: not implemented
     def base(self, inv=False):
         pass
 
@@ -179,6 +184,8 @@ class QNew(object):
             res += factor * prod
         return res
 
+    # calculates rotation matrix for a given j
+    # j:  Spin 
     def R_matrix(self, j):
         multi = int(2*j+1)
         res = np.zeros((multi, multi), dtype=complex)
@@ -193,6 +200,7 @@ class QNew(object):
             res *= self.i
         return res
     
+    # Calculate rotation angle from quaternion
     def omega(self):
         return 2*np.arccos(self.q[0])
 

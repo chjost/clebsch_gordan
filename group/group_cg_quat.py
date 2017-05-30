@@ -37,12 +37,19 @@ class TOhCG(object):
         if groups is not None:
             pindex = [x.p2 for x in groups]
             try:
+                # octohedral group always needed (at least in induction step).
                 indp0 = pindex.index(0)
+                # pick all groups from groups which belong to p, p1 or p2 respectively. 
+                # If no group for a given p is in groups, raise an RuntimeError
                 indp = pindex.index(p)
                 indp1 = pindex.index(p1)
                 indp2 = pindex.index(p2)
             except IndexError:
                 raise RuntimeError("no group with P^2 = %d (%d, %d) found" % (p, p1, p2))
+
+            # In TOh, the standard basis are symmetrized spherical harmonics. 
+            # If another basis is chosen, the basis transformation matrix 
+            # member is nontrivial, otherwise it contains the unit matrix
             self.U0 = groups[indp0].U3
             self.T0 = groups[indp0].U2
             if (not utils._eq(self.U0, groups[indp].U3)) or (
@@ -54,8 +61,12 @@ class TOhCG(object):
             if (not utils._eq(self.U0, groups[indp1].U3)) or (
                     not utils._eq(self.T0, groups[indp1].U2)):
                 raise RuntimeError("The group of op 2 has different basis")
+
+            # Succesively transform from cartesian coordinates (momenta) to 
+            # basis chosen in group
             self._U = self.U0.dot(self._U)
-            # save reference momenta
+
+            # save reference momenta in group basis
             self.pref = self._U.dot(groups[indp0].pref_cart)
             self.pref1 = self._U.dot(groups[indp1].pref_cart)
             self.pref2 = self._U.dot(groups[indp2].pref_cart)
@@ -808,24 +819,16 @@ class TOhCG(object):
             tsize = size*psize
 
             dfdict["Irrep"] = dfdict["Irrep"] + [name] * tsize
-            dfdict["row"] = dfdict["row"] + [\
-                    (x//psize)//multi+1 for x in range(tsize)]
-            dfdict["multi"] = dfdict["multi"] + [\
-                    (x//psize)%multi+1 for x in range(tsize)]
             dfdict["ptot"] = dfdict["ptot"] + plists[0] * size
             dfdict["p1"] = dfdict["p1"] + plists[1] * size
             dfdict["p2"] = dfdict["p2"] + plists[2] * size
-            dfdict["cg"] = dfdict["cg"] + [\
-                    _s(x) for x in self.cg[i,:multi,:dim].flatten()]
-            #df = DataFrame(dfdict)
-            #for m in range(multi):
-            #    for d in range(dim):
-            #        tstr = cgtostring(self.cg[i,m,d])
-            #        tmp = ["%s"%name, "%d"%d, "%d"%m, tstr]
-            #        tmp = " & ".join(tmp)
-            #        tmp = " ".join([tmp, "\\\\"])
-            #        print(tmp)
-            #        line = True
+            for m in range(multi):
+                for d in range(dim):
+                    dfdict["row"] = dfdict["row"] + [d+1]*psize
+                    dfdict["multi"] = dfdict["multi"] + [m+1]*psize
+                    dfdict["cg"] = dfdict["cg"] + [\
+                            _s(x) for x in self.cg[i,m,d]]
+
         df = DataFrame(dfdict)
 #        print(df)
         return df

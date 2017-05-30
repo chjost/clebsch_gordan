@@ -19,6 +19,9 @@ import utils
 import latex_utils as lu
 
 
+# Generate basis vectors of irreducible representation i.e. subduction coefficients
+# jmax: Maximum spin +1 for which bases are constructed. Always have to construct 
+# lower j because construction works iteratively
 class TOhBasis(object):
     def __init__(self, group=None, multi=1, prec=1e-6, verbose=1, jmax=None):
         self.prec = prec
@@ -47,6 +50,7 @@ class TOhBasis(object):
         self.dims = group.irrepdim
         _pref = group.pref_cart
         self.pref = (0,0,0) if _pref is None else tuple(_pref)
+
         # Everything in group is done in symmetrized spherical harmonics
         # according to Altmann & Herzig, Point-group Theory Tables, 2011.
         # The following basis change is done on top for the [2-4]D groups,
@@ -55,8 +59,9 @@ class TOhBasis(object):
         self.U3 = group.U3
         self.U4 = group.U4
 
-        # calculate
+        # calculate rotation matrices in 2j+1 dimensions up to maxj
         self.Rmat = self.precalc_R_matrices(group)
+
         self.basis, self.multi = self.calculate(group)
 
     def calculate(self, group):
@@ -66,10 +71,11 @@ class TOhBasis(object):
             basis.append([])
             num = self.multiplicityO3(group, j)
             for i, (ir, n) in enumerate(zip(group.irreps, num)):
+                # if irrep does not contribute to j, continue
                 if n < 1:
                     basis[-1].append(None)
                     continue
-                #basis[-1].append([])
+                # else calculate basis vectors
                 bvec = self.calc_basis_vec(ir, j, self.dims[i], oldbase=basis[-1])
                 basis[-1].append(utils.clean_complex(bvec))
                 bmulti[j][i] += int(bvec.shape[0])//int(self.dims[i])
@@ -164,6 +170,8 @@ class TOhBasis(object):
         base = np.asarray(base)
         return base
 
+    # effectively apply a projection operator to irrep
+    # yields all possible basis vectors
     def get_basis_vecs(self, irrep, row, col, j, n=None):
         prefac = float(irrep.dim)/irrep.mx.shape[0]
         jmult = int(2*j+1)

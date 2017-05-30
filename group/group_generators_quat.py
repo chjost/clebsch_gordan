@@ -5,12 +5,16 @@ import numpy as np
 import utils
 import quat
 
+# Pauli matrices 2d representation
 _pmatrix = np.asarray(
         [[[1., 0.], [0., 1.]],
          [[0., 1.], [1., 0.]],
          [[0., -1.j], [1.j, 0.]],
          [[1., 0.], [0., -1.]]], dtype=complex)
 
+
+# Generate matrix representation of elements for spin 0 (1d)
+# Delegates to Q_new.R_matrix()
 def genJ0(elements, inv=False, U=None):
     res = np.zeros((len(elements), 1, 1), dtype=complex)
     if inv:
@@ -21,6 +25,8 @@ def genJ0(elements, inv=False, U=None):
             res[i] = el.R_matrix(0)
     return res
 
+# Generate matrix representation of elements for spin 1/2 (2d)
+# Delegates to Q_new.R_matrix()
 def genJ1_2(elements, inv=False, U=None):
     res = np.zeros((len(elements), 2, 2), dtype=complex)
     if inv:
@@ -31,6 +37,8 @@ def genJ1_2(elements, inv=False, U=None):
             res[i] = el.R_matrix(0.5)
     return res
 
+# Generate matrix representation of elements for spin 1 (3d)
+# Delegates to Q_new.R_matrix()
 def genJ1(elements, inv=False, U=None):
     res = np.zeros((len(elements), 3, 3), dtype=complex)
     if inv:
@@ -41,6 +49,8 @@ def genJ1(elements, inv=False, U=None):
             res[i] = el.R_matrix(1)
     return res
 
+# Generate matrix representation of elements for spin 3/2 (4d)
+# Delegates to Q_new.R_matrix()
 def genJ3_2(elements, inv=False, U=None):
     res = np.zeros((len(elements), 4, 4), dtype=complex)
     if inv:
@@ -51,6 +61,8 @@ def genJ3_2(elements, inv=False, U=None):
             res[i] = el.R_matrix(1.5)
     return res
 
+# Generate A1 representation of elements for 1d
+# All elements are +-1 depending on inversion of the group
 def gen1D(elements, inv=False, U=None):
     if not inv:
         return np.ones((len(elements), 1, 1), dtype=complex)
@@ -60,6 +72,9 @@ def gen1D(elements, inv=False, U=None):
             res[i] *= el.i
         return res
 
+# Generate A1 representation of elements for 2d
+# Results analytically calculated from quaternions
+# TODO: How?
 def gen2D(elements, inv=False, U=None):
     res = np.zeros((len(elements), 2, 2), dtype=complex)
     if inv:
@@ -117,6 +132,9 @@ def compare_quat(elem, sign=False):
             if elem.comp(q) or elem.comp(np.negative(q)):
                 return i
     raise RuntimeError("element not identified: %r" % (elem.str()))
+
+################################################################################
+# Generate representations from analytic solution
 
 def genEpCMF(elements, inv=False, U=None):
     if U is None:
